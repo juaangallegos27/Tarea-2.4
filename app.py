@@ -22,11 +22,16 @@ uploaded_file = st.sidebar.file_uploader("Selecciona tu archivo CSV", type=["csv
 if uploaded_file is not None:
     data = pd.read_csv(uploaded_file)
     st.success("✅ Archivo cargado correctamente.")
+
     st.write("### Vista previa de los datos:")
-    st.dataframe(data.head())
+    # FIX: mostrar todo el DataFrame (scrollable) y el total de filas/columnas
+    st.dataframe(data, use_container_width=True)
+    st.caption(f"{data.shape[0]} filas × {data.shape[1]} columnas")
 
     # Filtrar columnas numéricas
-    numeric_cols = data.select_dtypes(include=['float64', 'int64', 'float32', 'int32']).columns.tolist()
+    numeric_cols = data.select_dtypes(
+        include=['float64', 'int64', 'float32', 'int32']
+    ).columns.tolist()
 
     if len(numeric_cols) < 2:
         st.warning("⚠️ El archivo debe contener al menos dos columnas numéricas.")
@@ -43,42 +48,19 @@ if uploaded_file is not None:
         # Parámetros de clustering
         k = st.sidebar.slider("Número de clusters (k):", 1, 10, 3)
 
-        # NUEVO: parámetros seleccionables
-        init = st.sidebar.selectbox(
-            "init (método de inicialización)",
-            options=["k-means++", "random"],
-            index=0
-        )
-
-        max_iter = st.sidebar.number_input(
-            "max_iter (iteraciones máximas)",
-            min_value=10,
-            max_value=1000,
-            value=300,
-            step=10
-        )
-
-        n_init_option = st.sidebar.selectbox(
-            "n_init (repeticiones de inicialización)",
-            options=["auto"] + list(range(1, 31)),
-            index=1  # por defecto 1 -> valor 1 (similar a 10 en tu ejemplo original si lo mueves)
-        )
+        # Parámetros seleccionables (lo que pediste)
+        init = st.sidebar.selectbox("init (método de inicialización)", ["k-means++", "random"], index=0)
+        max_iter = st.sidebar.number_input("max_iter (iteraciones máximas)", min_value=10, max_value=1000, value=300, step=10)
+        n_init_option = st.sidebar.selectbox("n_init (repeticiones de inicialización)", options=["auto"] + list(range(1, 31)), index=1)
         n_init = n_init_option  # puede ser 'auto' o int
 
         use_random_state = st.sidebar.checkbox("Fijar random_state", value=True)
-        random_state = st.sidebar.number_input(
-            "random_state",
-            min_value=0,
-            max_value=10_000,
-            value=0,
-            step=1
-        ) if use_random_state else None
+        random_state = st.sidebar.number_input("random_state", min_value=0, max_value=10000, value=0, step=1) if use_random_state else None
 
         n_components = st.sidebar.radio("Visualización PCA:", [2, 3], index=0)
 
         # --- Datos y modelo ---
         X = data[selected_cols]
-
         kmeans = KMeans(
             n_clusters=k,
             init=init,
@@ -100,18 +82,13 @@ if uploaded_file is not None:
         st.subheader("📊 Distribución original (antes de K-Means)")
         if n_components == 2:
             fig_before = px.scatter(
-                pca_df,
-                x='PCA1',
-                y='PCA2',
+                pca_df, x='PCA1', y='PCA2',
                 title="Datos originales proyectados con PCA (sin agrupar)",
                 color_discrete_sequence=["gray"]
             )
         else:
             fig_before = px.scatter_3d(
-                pca_df,
-                x='PCA1',
-                y='PCA2',
-                z='PCA3',
+                pca_df, x='PCA1', y='PCA2', z='PCA3',
                 title="Datos originales proyectados con PCA (sin agrupar)",
                 color_discrete_sequence=["gray"]
             )
@@ -121,19 +98,14 @@ if uploaded_file is not None:
         st.subheader(f"🎯 Datos agrupados con K-Means (k = {k})")
         if n_components == 2:
             fig_after = px.scatter(
-                pca_df,
-                x='PCA1',
-                y='PCA2',
+                pca_df, x='PCA1', y='PCA2',
                 color=pca_df['Cluster'].astype(str),
                 title="Clusters visualizados en 2D con PCA",
                 color_discrete_sequence=px.colors.qualitative.Vivid
             )
         else:
             fig_after = px.scatter_3d(
-                pca_df,
-                x='PCA1',
-                y='PCA2',
-                z='PCA3',
+                pca_df, x='PCA1', y='PCA2', z='PCA3',
                 color=pca_df['Cluster'].astype(str),
                 title="Clusters visualizados en 3D con PCA",
                 color_discrete_sequence=px.colors.qualitative.Vivid
